@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Face Recognition & Emotion Studio — ArcFace R50</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: { 50: '#eef2ff', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca' }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    .glow-green { box-shadow: 0 0 25px -5px rgba(16, 185, 129, 0.35); }
+    .glow-red { box-shadow: 0 0 25px -5px rgba(244, 63, 94, 0.35); }
+    .dropzone { transition: all 0.2s ease-in-out; }
+    .dropzone:hover { border-color: #6366f1; background-color: rgba(99, 102, 241, 0.05); }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans antialiased">
+
+  <!-- Header -->
+  <header class="border-b border-slate-800 bg-slate-900/70 backdrop-blur sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
+          <i class="fa-solid fa-face-smile text-xl"></i>
+        </div>
+        <div>
+          <h1 class="text-lg font-bold bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent">Face & Emotion Studio</h1>
+          <p class="text-xs text-slate-400">ArcFace R50 (Identitas) &bull; ViT Emotion AI (7 Ekspresi Wajah)</p>
+        </div>
+      </div>
+      
+      <div class="flex items-center space-x-3">
+        <div class="hidden sm:flex items-center space-x-2 px-3 py-1.5 rounded-full bg-slate-800/80 border border-slate-700/60 text-xs text-slate-300">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span>Localhost:4444</span>
+        </div>
+        <span class="px-2.5 py-1 text-xs font-semibold rounded-md bg-purple-950 text-purple-300 border border-purple-700/50">
+          Identitas + Emosi Aktif
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Navigation Tabs -->
+  <div class="border-b border-slate-800 bg-slate-900/40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <nav class="flex space-x-3 sm:space-x-8 overflow-x-auto" aria-label="Tabs">
+        <button onclick="switchTab('tab-verify')" id="btn-tab-verify" class="tab-btn active border-b-2 border-indigo-500 text-indigo-400 py-3.5 px-1 text-sm font-medium flex items-center gap-2 whitespace-nowrap">
+          <i class="fa-solid fa-code-compare"></i>
+          <span>1:1 Verifikasi Wajah</span>
+        </button>
+        <button onclick="switchTab('tab-emotion')" id="btn-tab-emotion" class="tab-btn border-b-2 border-transparent text-slate-400 hover:text-slate-200 py-3.5 px-1 text-sm font-medium flex items-center gap-2 whitespace-nowrap">
+          <i class="fa-solid fa-masks-theater text-pink-400"></i>
+          <span>Deteksi Emosi (Marah, Senang, dll.)</span>
+        </button>
+        <button onclick="switchTab('tab-gallery')" id="btn-tab-gallery" class="tab-btn border-b-2 border-transparent text-slate-400 hover:text-slate-200 py-3.5 px-1 text-sm font-medium flex items-center gap-2 whitespace-nowrap">
+          <i class="fa-solid fa-users-viewfinder"></i>
+          <span>1:N Database Identitas</span>
+        </button>
+        <button onclick="switchTab('tab-inspect')" id="btn-tab-inspect" class="tab-btn border-b-2 border-transparent text-slate-400 hover:text-slate-200 py-3.5 px-1 text-sm font-medium flex items-center gap-2 whitespace-nowrap">
+          <i class="fa-solid fa-chart-simple"></i>
+          <span>Inspeksi Vektor (512-D)</span>
+        </button>
+      </nav>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+    <!-- ==================== TAB 1: VERIFIKASI WAJAH 1:1 ==================== -->
+    <section id="tab-verify" class="tab-content block space-y-6">
+      <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 sm:p-8">
+        <div class="mb-6">
+          <h2 class="text-xl font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-user-check text-indigo-400"></i>
+            Verifikasi Kemiripan Dua Wajah (Face Matching)
+          </h2>
+          <p class="text-sm text-slate-400 mt-1">
+            Unggah 2 foto wajah atau ambil via webcam. Wajah akan dipotong otomatis dan diekstrak fiturnya menggunakan ArcFace R50 untuk menentukan kecocokan identitas sekaligus membaca ekspresi wajah masing-masing.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Card Foto 1 -->
+          <div class="flex flex-col bg-slate-900/90 border border-slate-800 rounded-xl p-5">
+            <div class="flex justify-between items-center mb-3">
+              <span class="text-sm font-semibold text-slate-200 flex items-center gap-2">
+                <span class="w-6 h-6 rounded-full bg-indigo-600 text-xs flex items-center justify-center font-bold">1</span>
+                Foto Wajah A
+              </span>
+              <button onclick="openWebcam('imgA')" class="text-xs bg-slate-800 hover:bg-slate-700 text-indigo-300 px-2.5 py-1.5 rounded-lg border border-slate-700 flex items-center gap-1.5">
+                <i class="fa-solid fa-camera"></i> Ambil Foto Kamera
+              </button>
+            </div>
+
+            <div id="dropzoneA" onclick="document.getElementById('inputA').click()" class="dropzone border-2 border-dashed border-slate-700 rounded-xl p-4 flex flex-col items-center justify-center min-h-[220px] cursor-pointer relative bg-slate-950/40">
+              <input type="file" id="inputA" accept="image/*" class="hidden" onchange="handleImageSelect(event, 'previewA', 'dataA')">
+              <div id="placeholderA" class="text-center p-4">
+                <i class="fa-regular fa-image text-4xl text-slate-600 mb-2"></i>
+                <p class="text-sm text-slate-300 font-medium">Klik atau seret foto ke sini</p>
+                <p class="text-xs text-slate-500 mt-1">Foto wajah bebas (Auto Crop)</p>
+              </div>
+              <img id="previewA" class="max-h-56 max-w-full rounded-lg object-contain hidden" alt="Foto Wajah A">
+              <input type="hidden" id="dataA">
+            </div>
+
+            <!-- Preview Potongan Wajah A & Emosi -->
+            <div id="cropBoxA" class="mt-3 p-2.5 rounded-lg bg-slate-950/80 border border-slate-800 hidden flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <img id="cropThumbA" class="w-12 h-12 rounded border border-indigo-500/50 object-cover" alt="Wajah A Terpotong">
+                <div class="text-xs">
+                  <div class="font-semibold text-slate-300">Wajah A yang Dianalisis:</div>
+                  <div id="cropStatusA" class="text-[11px] text-emerald-400">Terdeteksi Otomatis &bull; 112x112</div>
+                </div>
+              </div>
+              <div id="emotionBadgeA" class="text-xs font-semibold px-2.5 py-1 rounded-lg border"></div>
+            </div>
+          </div>
+
+          <!-- Card Foto 2 -->
+          <div class="flex flex-col bg-slate-900/90 border border-slate-800 rounded-xl p-5">
+            <div class="flex justify-between items-center mb-3">
+              <span class="text-sm font-semibold text-slate-200 flex items-center gap-2">
+                <span class="w-6 h-6 rounded-full bg-purple-600 text-xs flex items-center justify-center font-bold">2</span>
+                Foto Wajah B
+              </span>
+              <button onclick="openWebcam('imgB')" class="text-xs bg-slate-800 hover:bg-slate-700 text-purple-300 px-2.5 py-1.5 rounded-lg border border-slate-700 flex items-center gap-1.5">
+                <i class="fa-solid fa-camera"></i> Ambil Foto Kamera
+              </button>
+            </div>
+
+            <div id="dropzoneB" onclick="document.getElementById('inputB').click()" class="dropzone border-2 border-dashed border-slate-700 rounded-xl p-4 flex flex-col items-center justify-center min-h-[220px] cursor-pointer relative bg-slate-950/40">
+              <input type="file" id="inputB" accept="image/*" class="hidden" onchange="handleImageSelect(event, 'previewB', 'dataB')">
+              <div id="placeholderB" class="text-center p-4">
+                <i class="fa-regular fa-image text-4xl text-slate-600 mb-2"></i>
+                <p class="text-sm text-slate-300 font-medium">Klik atau seret foto ke sini</p>
+                <p class="text-xs text-slate-500 mt-1">Foto wajah bebas (Auto Crop)</p>
+              </div>
+              <img id="previewB" class="max-h-56 max-w-full rounded-lg object-contain hidden" alt="Foto Wajah B">
+              <input type="hidden" id="dataB">
+            </div>
+
+            <!-- Preview Potongan Wajah B & Emosi -->
+            <div id="cropBoxB" class="mt-3 p-2.5 rounded-lg bg-slate-950/80 border border-slate-800 hidden flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <img id="cropThumbB" class="w-12 h-12 rounded border border-purple-500/50 object-cover" alt="Wajah B Terpotong">
+                <div class="text-xs">
+                  <div class="font-semibold text-slate-300">Wajah B yang Dianalisis:</div>
+                  <div id="cropStatusB" class="text-[11px] text-emerald-400">Terdeteksi Otomatis &bull; 112x112</div>
+                </div>
+              </div>
+              <div id="emotionBadgeB" class="text-xs font-semibold px-2.5 py-1 rounded-lg border"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tombol Aksi & Opsi -->
+        <div class="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-800">
+          <div class="flex items-center gap-3 w-full sm:w-auto text-xs text-slate-400">
+            <label for="threshold" class="whitespace-nowrap font-medium text-slate-300">Ambang Batas (Threshold):</label>
+            <input type="range" id="threshold" min="0.20" max="0.80" step="0.05" value="0.40" oninput="document.getElementById('thresholdVal').innerText = this.value" class="w-28 accent-indigo-500">
+            <span id="thresholdVal" class="font-mono text-indigo-400 font-semibold">0.40</span>
+            <span class="text-slate-500">(Acuan ArcFace: 0.40)</span>
+          </div>
+
+          <button id="btnCompare" onclick="compareFaces()" class="w-full sm:w-auto px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-medium text-sm flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/30 transition-all">
+            <i class="fa-solid fa-wand-magic-sparkles"></i>
+            <span>Bandingkan Sekarang</span>
+          </button>
+        </div>
+
+        <!-- Hasil Pencocokan -->
+        <div id="verifyResult" class="mt-8 hidden">
+          <div id="resultCard" class="rounded-xl border p-6 flex flex-col md:flex-row items-center gap-6 justify-between">
+            <div class="flex items-center gap-4">
+              <div id="matchIcon" class="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl"></div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <span id="matchBadge" class="text-xs uppercase font-extrabold px-2.5 py-0.5 rounded-full"></span>
+                  <span id="matchScorePercent" class="text-2xl font-bold font-mono"></span>
+                </div>
+                <h3 id="matchTitle" class="text-xl font-bold mt-1"></h3>
+                <p id="matchExplanation" class="text-sm text-slate-300 mt-0.5"></p>
+              </div>
+            </div>
+
+            <!-- Detail Angka -->
+            <div class="grid grid-cols-2 gap-3 bg-slate-950/70 p-4 rounded-xl border border-slate-800 text-xs w-full md:w-auto font-mono">
+              <div>
+                <div class="text-slate-500">Cosine Similarity</div>
+                <div id="metricCosine" class="text-sm font-semibold text-white">0.0000</div>
+              </div>
+              <div>
+                <div class="text-slate-500">Euclidean Distance</div>
+                <div id="metricEuclidean" class="text-sm font-semibold text-white">0.0000</div>
+              </div>
+              <div>
+                <div class="text-slate-500">Threshold Acuan</div>
+                <div id="metricThreshold" class="text-sm font-semibold text-indigo-400">0.40</div>
+              </div>
+              <div>
+                <div class="text-slate-500">Keyakinan Cocok</div>
+                <div id="metricConfidence" class="text-sm font-semibold text-emerald-400">0.0%</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ==================== TAB 2: DETEKSI EMOSI (EMOTION AI) ==================== -->
+    <section id="tab-emotion" class="tab-content hidden space-y-6">
+      <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 sm:p-8">
+        <div class="mb-6">
+          <h2 class="text-xl font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-masks-theater text-pink-400"></i>
+            Analisis Ekspresi & Emosi Wajah (Facial Emotion AI)
+          </h2>
+          <p class="text-sm text-slate-400 mt-1">
+            Mendeteksi 7 spektrum emosi dasar manusia: <strong>Senang</strong>, <strong>Marah</strong>, <strong>Sedih</strong>, <strong>Kaget</strong>, <strong>Takut</strong>, <strong>Jijik</strong>, dan <strong>Netral</strong> menggunakan model Vision Transformer (ViT).
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          <!-- Input Gambar & Kamera -->
+          <div class="lg:col-span-5 flex flex-col space-y-4">
+            <div class="flex justify-between items-center">
+              <span class="text-sm font-semibold text-slate-200">Foto Wajah yang Akan Dianalisis:</span>
+              <button onclick="openWebcam('imgEmo')" class="text-xs bg-slate-800 hover:bg-slate-700 text-pink-300 px-3 py-1.5 rounded-lg border border-slate-700 flex items-center gap-1.5">
+                <i class="fa-solid fa-camera"></i> Gunakan Kamera
+              </button>
+            </div>
+
+            <div id="dropzoneEmo" onclick="document.getElementById('inputEmo').click()" class="dropzone border-2 border-dashed border-slate-700 rounded-2xl p-6 flex flex-col items-center justify-center min-h-[260px] cursor-pointer bg-slate-950/40 relative">
+              <input type="file" id="inputEmo" accept="image/*" class="hidden" onchange="handleImageSelect(event, 'previewEmo', 'dataEmo')">
+              <div id="placeholderEmo" class="text-center p-4">
+                <i class="fa-regular fa-face-laugh-beam text-5xl text-slate-600 mb-3"></i>
+                <p class="text-sm text-slate-200 font-semibold">Pilih atau seret foto ekspresi wajah</p>
+                <p class="text-xs text-slate-500 mt-1">Selfie, ekspresi tertawa, marah, kaget, dll.</p>
+              </div>
+              <img id="previewEmo" class="max-h-64 max-w-full rounded-xl object-contain hidden" alt="Foto Emosi">
+              <input type="hidden" id="dataEmo">
+            </div>
+
+            <button id="btnAnalyzeEmotion" onclick="analyzeEmotion()" class="w-full py-3.5 rounded-xl bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white font-semibold text-sm flex items-center justify-center gap-2 shadow-lg shadow-pink-600/30 transition-all">
+              <i class="fa-solid fa-wand-magic-sparkles"></i>
+              <span>Analisis Emosi Sekarang</span>
+            </button>
+          </div>
+
+          <!-- Hasil Deteksi Emosi -->
+          <div class="lg:col-span-7 flex flex-col justify-between">
+            <div id="emotionResultEmpty" class="h-full flex flex-col items-center justify-center border border-slate-800/80 rounded-2xl p-8 text-center bg-slate-950/30">
+              <i class="fa-solid fa-chart-pie text-5xl text-slate-700 mb-3"></i>
+              <h3 class="text-base font-semibold text-slate-300">Belum Ada Analisis</h3>
+              <p class="text-xs text-slate-500 mt-1 max-w-sm">Unggah foto ekspresi wajah atau ambil selfie di samping lalu tekan tombol "Analisis Emosi Sekarang".</p>
+            </div>
+
+            <div id="emotionResultContent" class="hidden space-y-6">
+              <!-- Hero Emosi Dominan -->
+              <div id="dominantCard" class="p-6 rounded-2xl border flex items-center justify-between">
+                <div class="flex items-center gap-5">
+                  <div id="dominantEmoji" class="text-5xl animate-bounce">😃</div>
+                  <div>
+                    <span class="text-xs uppercase font-extrabold tracking-wider text-slate-400">Ekspresi Dominan</span>
+                    <h3 id="dominantTitle" class="text-2xl font-black mt-0.5">Senang / Bahagia</h3>
+                    <p id="dominantDesc" class="text-xs text-slate-300 mt-1">Tingkat keyakinan: <span id="dominantScore" class="font-bold">0.0%</span></p>
+                  </div>
+                </div>
+                <!-- Thumbnail Crop Wajah -->
+                <div class="text-center">
+                  <img id="emotionCropThumb" class="w-16 h-16 rounded-xl border border-slate-700 object-cover shadow-md" alt="Wajah Terdeteksi">
+                  <div class="text-[10px] text-slate-500 mt-1">Area Wajah</div>
+                </div>
+              </div>
+
+              <!-- Breakdown 7 Emosi -->
+              <div class="bg-slate-950/80 border border-slate-800 rounded-2xl p-6">
+                <h4 class="text-xs uppercase font-bold text-slate-400 mb-4 flex items-center justify-between">
+                  <span>Distribusi 7 Spektrum Emosi</span>
+                  <span class="text-[11px] font-normal text-slate-500">Probabilitas Relatif (%)</span>
+                </h4>
+                <div id="emotionBars" class="space-y-3"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ==================== TAB 3: DATABASE & IDENTIFIKASI (1:N) ==================== -->
+    <section id="tab-gallery" class="tab-content hidden space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Kolom Registrasi Wajah Baru -->
+        <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 flex flex-col">
+          <h2 class="text-base font-bold text-white flex items-center gap-2 mb-3">
+            <i class="fa-solid fa-user-plus text-indigo-400"></i>
+            Daftarkan Wajah Baru
+          </h2>
+          <p class="text-xs text-slate-400 mb-4">
+            Simpan embedding wajah ke dalam database lokal untuk dikenali sewaktu-waktu.
+          </p>
+
+          <div class="space-y-4 flex-1">
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Nama / Identitas:</label>
+              <input type="text" id="regName" placeholder="Contoh: Budi Santoso" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500">
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Foto Wajah:</label>
+              <div onclick="document.getElementById('regInput').click()" class="dropzone border-2 border-dashed border-slate-700 rounded-xl p-3 flex flex-col items-center justify-center min-h-[140px] cursor-pointer bg-slate-950/40">
+                <input type="file" id="regInput" accept="image/*" class="hidden" onchange="handleImageSelect(event, 'regPreview', 'regData')">
+                <div id="regPlaceholder" class="text-center">
+                  <i class="fa-regular fa-image text-2xl text-slate-500 mb-1"></i>
+                  <p class="text-xs text-slate-300">Pilih Foto</p>
+                </div>
+                <img id="regPreview" class="max-h-28 rounded object-contain hidden" alt="Preview Registrasi">
+                <input type="hidden" id="regData">
+              </div>
+            </div>
+
+            <button onclick="registerFace()" class="w-full py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center justify-center gap-2">
+              <i class="fa-solid fa-floppy-disk"></i> Simpan ke Database
+            </button>
+          </div>
+        </div>
+
+        <!-- Kolom Database Terdaftar & Uji Wajah (1:N) -->
+        <div class="lg:col-span-2 space-y-6">
+          <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-6">
+            <h2 class="text-base font-bold text-white flex items-center gap-2 mb-2">
+              <i class="fa-solid fa-magnifying-glass-chart text-purple-400"></i>
+              Cari & Identifikasi Wajah (1:N Matching)
+            </h2>
+            <p class="text-xs text-slate-400 mb-4">
+              Unggah foto siapa pun, sistem akan memindai seluruh orang yang terdaftar dan mencari profil yang paling mirip.
+            </p>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+              <div onclick="document.getElementById('searchQueryInput').click()" class="dropzone border-2 border-dashed border-slate-700 rounded-xl p-3 flex flex-col items-center justify-center min-h-[140px] cursor-pointer bg-slate-950/40">
+                <input type="file" id="searchQueryInput" accept="image/*" class="hidden" onchange="handleImageSelect(event, 'searchPreview', 'searchData')">
+                <div id="searchPlaceholder" class="text-center">
+                  <i class="fa-solid fa-user-tag text-3xl text-slate-600 mb-1"></i>
+                  <p class="text-xs text-slate-300">Unggah Foto Uji</p>
+                </div>
+                <img id="searchPreview" class="max-h-28 rounded object-contain hidden" alt="Query Face">
+                <input type="hidden" id="searchData">
+              </div>
+
+              <div class="space-y-3">
+                <button onclick="identifyFace()" class="w-full py-3 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-sm font-semibold flex items-center justify-center gap-2 shadow-lg shadow-purple-600/30">
+                  <i class="fa-solid fa-bullseye"></i> Cari Identitas Wajah
+                </button>
+                <div id="identifyResult" class="text-xs p-3 rounded-lg bg-slate-950 border border-slate-800 hidden"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-6">
+            <div class="flex justify-between items-center mb-4">
+              <h3 class="text-sm font-bold text-slate-200 flex items-center gap-2">
+                <i class="fa-solid fa-database text-emerald-400"></i>
+                Database Wajah Tersimpan (<span id="dbCount">0</span>)
+              </h3>
+              <button onclick="clearDatabase()" class="text-xs text-rose-400 hover:text-rose-300">
+                <i class="fa-solid fa-trash-can"></i> Kosongkan
+              </button>
+            </div>
+            
+            <div id="galleryList" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 text-xs">
+              <p class="text-slate-500 col-span-full py-4 text-center">Belum ada wajah yang didaftarkan.</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ==================== TAB 4: INSPEKSI VEKTOR 512-D ==================== -->
+    <section id="tab-inspect" class="tab-content hidden space-y-6">
+      <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 sm:p-8">
+        <h2 class="text-xl font-bold text-white flex items-center gap-2 mb-2">
+          <i class="fa-solid fa-microchip text-indigo-400"></i>
+          Inspeksi Vektor Representasi ArcFace (512-D Embedding)
+        </h2>
+        <p class="text-sm text-slate-400 mb-6">
+          Setiap wajah diubah menjadi 512 nilai floating-point (FP32) yang unik di ruang hiper-bola bola satuan.
+        </p>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div class="flex flex-col">
+            <div onclick="document.getElementById('inspectInput').click()" class="dropzone border-2 border-dashed border-slate-700 rounded-xl p-4 flex flex-col items-center justify-center min-h-[200px] cursor-pointer bg-slate-950/40">
+              <input type="file" id="inspectInput" accept="image/*" class="hidden" onchange="handleImageSelect(event, 'inspectPreview', 'inspectData')">
+              <div id="inspectPlaceholder" class="text-center">
+                <i class="fa-solid fa-fingerprint text-4xl text-slate-600 mb-2"></i>
+                <p class="text-xs text-slate-300">Unggah foto untuk diinspeksi</p>
+              </div>
+              <img id="inspectPreview" class="max-h-48 rounded object-contain hidden" alt="Inspect Preview">
+              <input type="hidden" id="inspectData">
+            </div>
+
+            <button onclick="inspectEmbedding()" class="mt-4 w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center justify-center gap-2">
+              <i class="fa-solid fa-chart-line"></i> Ekstrak & Analisis Vektor
+            </button>
+          </div>
+
+          <div class="md:col-span-2 space-y-4">
+            <div id="inspectStats" class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div class="bg-slate-950 p-3 rounded-lg border border-slate-800">
+                <div class="text-[10px] text-slate-500 uppercase font-mono">L2 Norm (Panjang)</div>
+                <div id="statNorm" class="text-base font-bold font-mono text-indigo-400">-</div>
+              </div>
+              <div class="bg-slate-950 p-3 rounded-lg border border-slate-800">
+                <div class="text-[10px] text-slate-500 uppercase font-mono">Nilai Rata-rata</div>
+                <div id="statMean" class="text-base font-bold font-mono text-slate-300">-</div>
+              </div>
+              <div class="bg-slate-950 p-3 rounded-lg border border-slate-800">
+                <div class="text-[10px] text-slate-500 uppercase font-mono">Standar Deviasi</div>
+                <div id="statStd" class="text-base font-bold font-mono text-slate-300">-</div>
+              </div>
+              <div class="bg-slate-950 p-3 rounded-lg border border-slate-800">
+                <div class="text-[10px] text-slate-500 uppercase font-mono">Min / Max Nilai</div>
+                <div id="statMinMax" class="text-base font-bold font-mono text-emerald-400">-</div>
+              </div>
+            </div>
+
+            <div>
+              <div class="text-xs font-semibold text-slate-300 mb-2">Sample 32 Dimensi Pertama Vektor:</div>
+              <div id="vectorValues" class="bg-slate-950 p-4 rounded-xl border border-slate-800 font-mono text-[11px] text-slate-400 max-h-48 overflow-y-auto leading-relaxed">
+                Silakan unggah foto dan tekan "Ekstrak & Analisis Vektor".
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Modal Webcam -->
+  <div id="webcamModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-2xl">
+      <div class="flex justify-between items-center">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-video text-indigo-400"></i> Ambil Foto dari Kamera
+        </h3>
+        <button onclick="closeWebcam()" class="text-slate-400 hover:text-white">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <div class="relative rounded-xl overflow-hidden bg-black aspect-video flex items-center justify-center">
+        <video id="webcamVideo" autoplay playsinline class="w-full h-full object-cover"></video>
+        <canvas id="webcamCanvas" class="hidden"></canvas>
+      </div>
+
+      <div class="flex justify-end gap-3 pt-2">
+        <button onclick="closeWebcam()" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-300">
+          Batal
+        </button>
+        <button onclick="captureWebcam()" class="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-xs font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-camera"></i> Ambil Foto
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="border-t border-slate-800/80 bg-slate-900/30 py-4 text-center text-xs text-slate-500">
+    <p>Face Recognition & Facial Emotion Studio &bull; Identitas: ArcFace FP32 &bull; Ekspresi: Vision Transformer (FER)</p>
+  </footer>
+
+  <!-- Scripts -->
+  <script>
+    let activeWebcamTarget = null;
+    let webcamStream = null;
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('border-indigo-500', 'text-indigo-400', 'border-pink-500', 'text-pink-400');
+        btn.classList.add('border-transparent', 'text-slate-400');
+      });
+
+      document.getElementById(tabId).classList.remove('hidden');
+      const activeBtn = document.getElementById('btn-' + tabId);
+      if (activeBtn) {
+        activeBtn.classList.remove('border-transparent', 'text-slate-400');
+        if (tabId === 'tab-emotion') {
+          activeBtn.classList.add('border-pink-500', 'text-pink-400');
+        } else {
+          activeBtn.classList.add('border-indigo-500', 'text-indigo-400');
+        }
+      }
+    }
+
+    function handleImageSelect(event, previewId, dataId) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const dataUrl = e.target.result;
+        document.getElementById(dataId).value = dataUrl;
+        const preview = document.getElementById(previewId);
+        preview.src = dataUrl;
+        preview.classList.remove('hidden');
+        
+        const placeholderId = previewId.replace('preview', 'placeholder').replace('Preview', 'Placeholder');
+        const ph = document.getElementById(placeholderId);
+        if (ph) ph.classList.add('hidden');
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // Modal Webcam
+    async function openWebcam(target) {
+      activeWebcamTarget = target;
+      const modal = document.getElementById('webcamModal');
+      const video = document.getElementById('webcamVideo');
+      modal.classList.remove('hidden');
+      try {
+        webcamStream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
+        video.srcObject = webcamStream;
+      } catch (err) {
+        alert("Tidak dapat mengakses kamera: " + err.message);
+        closeWebcam();
+      }
+    }
+
+    function closeWebcam() {
+      const modal = document.getElementById('webcamModal');
+      modal.classList.add('hidden');
+      if (webcamStream) {
+        webcamStream.getTracks().forEach(track => track.stop());
+        webcamStream = null;
+      }
+    }
+
+    function captureWebcam() {
+      const video = document.getElementById('webcamVideo');
+      const canvas = document.getElementById('webcamCanvas');
+      canvas.width = video.videoWidth || 640;
+      canvas.height = video.videoHeight || 480;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL('image/jpeg');
+
+      if (activeWebcamTarget === 'imgA') {
+        document.getElementById('dataA').value = dataUrl;
+        const img = document.getElementById('previewA');
+        img.src = dataUrl;
+        img.classList.remove('hidden');
+        document.getElementById('placeholderA').classList.add('hidden');
+      } else if (activeWebcamTarget === 'imgB') {
+        document.getElementById('dataB').value = dataUrl;
+        const img = document.getElementById('previewB');
+        img.src = dataUrl;
+        img.classList.remove('hidden');
+        document.getElementById('placeholderB').classList.add('hidden');
+      } else if (activeWebcamTarget === 'imgEmo') {
+        document.getElementById('dataEmo').value = dataUrl;
+        const img = document.getElementById('previewEmo');
+        img.src = dataUrl;
+        img.classList.remove('hidden');
+        document.getElementById('placeholderEmo').classList.add('hidden');
+      }
+      closeWebcam();
+    }
+
+    // 1:1 Verifikasi Wajah
+    async function compareFaces() {
+      const imgA = document.getElementById('dataA').value;
+      const imgB = document.getElementById('dataB').value;
+      const threshold = parseFloat(document.getElementById('threshold').value);
+
+      if (!imgA || !imgB) {
+        alert("Silakan masukkan kedua foto wajah (Foto A dan Foto B) terlebih dahulu!");
+        return;
+      }
+
+      const btn = document.getElementById('btnCompare');
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Memproses Wajah & Ekspresi...`;
+
+      try {
+        const resp = await fetch('/api/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image_a: imgA, image_b: imgB, threshold: threshold })
+        });
+        const data = await resp.json();
+
+        if (data.error) {
+          alert("Error: " + data.error);
+          return;
+        }
+
+        if (data.crop_a_thumb) {
+          document.getElementById('cropThumbA').src = data.crop_a_thumb;
+          document.getElementById('cropBoxA').classList.remove('hidden');
+          document.getElementById('cropStatusA').innerHTML = data.detected_a 
+            ? `<span class="text-emerald-400"><i class="fa-solid fa-check"></i> Wajah Terdeteksi (112x112)</span>`
+            : `<span class="text-amber-400"><i class="fa-solid fa-triangle-exclamation"></i> Center Crop</span>`;
+          if (data.emotion_a) {
+            const badgeA = document.getElementById('emotionBadgeA');
+            badgeA.className = `text-xs font-semibold px-2.5 py-1 rounded-lg border ${data.emotion_a.badge}`;
+            badgeA.innerHTML = `${data.emotion_a.emoji} ${data.emotion_a.label_id.split('/')[0]} (${data.emotion_a.percent}%)`;
+          }
+        }
+
+        if (data.crop_b_thumb) {
+          document.getElementById('cropThumbB').src = data.crop_b_thumb;
+          document.getElementById('cropBoxB').classList.remove('hidden');
+          document.getElementById('cropStatusB').innerHTML = data.detected_b 
+            ? `<span class="text-emerald-400"><i class="fa-solid fa-check"></i> Wajah Terdeteksi (112x112)</span>`
+            : `<span class="text-amber-400"><i class="fa-solid fa-triangle-exclamation"></i> Center Crop</span>`;
+          if (data.emotion_b) {
+            const badgeB = document.getElementById('emotionBadgeB');
+            badgeB.className = `text-xs font-semibold px-2.5 py-1 rounded-lg border ${data.emotion_b.badge}`;
+            badgeB.innerHTML = `${data.emotion_b.emoji} ${data.emotion_b.label_id.split('/')[0]} (${data.emotion_b.percent}%)`;
+          }
+        }
+
+        const verifyResult = document.getElementById('verifyResult');
+        verifyResult.classList.remove('hidden');
+
+        const isMatch = data.is_match;
+        const resultCard = document.getElementById('resultCard');
+        const matchIcon = document.getElementById('matchIcon');
+        const matchBadge = document.getElementById('matchBadge');
+        const matchTitle = document.getElementById('matchTitle');
+        const matchExplanation = document.getElementById('matchExplanation');
+        const matchScorePercent = document.getElementById('matchScorePercent');
+
+        document.getElementById('metricCosine').innerText = data.cosine_similarity.toFixed(4);
+        document.getElementById('metricEuclidean').innerText = data.euclidean_distance.toFixed(4);
+        document.getElementById('metricThreshold').innerText = data.threshold.toFixed(2);
+        document.getElementById('metricConfidence').innerText = `${data.confidence_percent.toFixed(1)}%`;
+        matchScorePercent.innerText = `${data.confidence_percent.toFixed(1)}%`;
+
+        if (isMatch) {
+          resultCard.className = "rounded-xl border border-emerald-500/50 bg-emerald-950/20 p-6 flex flex-col md:flex-row items-center gap-6 justify-between glow-green";
+          matchIcon.className = "w-16 h-16 rounded-2xl flex items-center justify-center text-3xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
+          matchIcon.innerHTML = `<i class="fa-solid fa-check"></i>`;
+          matchBadge.className = "text-xs uppercase font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30";
+          matchBadge.innerText = "MATCH (ORANG YANG SAMA)";
+          matchTitle.innerText = "Wajah Identik / Orang yang Sama";
+          matchTitle.className = "text-xl font-bold mt-1 text-emerald-300";
+          matchExplanation.innerText = `Skor Cosine Similarity (${data.cosine_similarity.toFixed(4)}) melampaui batas minimum ${data.threshold.toFixed(2)}.`;
+        } else {
+          resultCard.className = "rounded-xl border border-rose-500/50 bg-rose-950/20 p-6 flex flex-col md:flex-row items-center gap-6 justify-between glow-red";
+          matchIcon.className = "w-16 h-16 rounded-2xl flex items-center justify-center text-3xl bg-rose-500/20 text-rose-400 border border-rose-500/30";
+          matchIcon.innerHTML = `<i class="fa-solid fa-xmark"></i>`;
+          matchBadge.className = "text-xs uppercase font-extrabold px-2.5 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30";
+          matchBadge.innerText = "NO MATCH (ORANG BERBEDA)";
+          matchTitle.innerText = "Wajah Berbeda / Orang Lain";
+          matchTitle.className = "text-xl font-bold mt-1 text-rose-300";
+          matchExplanation.innerText = `Skor Cosine Similarity (${data.cosine_similarity.toFixed(4)}) berada di bawah ambang batas ${data.threshold.toFixed(2)}.`;
+        }
+      } catch (err) {
+        alert("Gagal menghubungi server: " + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> <span>Bandingkan Sekarang</span>`;
+      }
+    }
+
+    // Deteksi Emosi (Emotion AI)
+    async function analyzeEmotion() {
+      const img = document.getElementById('dataEmo').value;
+      if (!img) {
+        alert("Unggah foto atau ambil foto via kamera terlebih dahulu!");
+        return;
+      }
+
+      const btn = document.getElementById('btnAnalyzeEmotion');
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Memindai Wajah & Menganalisis Emosi...`;
+
+      try {
+        const resp = await fetch('/api/emotion', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: img })
+        });
+        const data = await resp.json();
+
+        if (data.error) {
+          alert("Error: " + data.error);
+          return;
+        }
+
+        document.getElementById('emotionResultEmpty').classList.add('hidden');
+        const content = document.getElementById('emotionResultContent');
+        content.classList.remove('hidden');
+
+        // Dominant Emotion
+        const dom = data.dominant;
+        document.getElementById('dominantEmoji').innerText = dom.emoji;
+        document.getElementById('dominantTitle').innerText = dom.label_id;
+        document.getElementById('dominantScore').innerText = `${dom.percent}%`;
+        document.getElementById('emotionCropThumb').src = data.crop_thumb;
+
+        const domCard = document.getElementById('dominantCard');
+        domCard.className = `p-6 rounded-2xl border flex items-center justify-between ${dom.badge.replace('text-', 'border-').split(' ')[0]} bg-slate-900/90`;
+
+        // Render 7 bars
+        const barsContainer = document.getElementById('emotionBars');
+        barsContainer.innerHTML = data.emotions.map(item => `
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <span class="font-medium text-slate-300 flex items-center gap-1.5">
+                <span>${item.emoji}</span>
+                <span>${item.label_id}</span>
+              </span>
+              <span class="font-mono font-bold ${item.color}">${item.percent}%</span>
+            </div>
+            <div class="w-full h-2.5 rounded-full bg-slate-800 overflow-hidden">
+              <div class="h-full rounded-full ${item.bg} transition-all duration-700 ease-out" style="width: ${Math.max(item.percent, 1)}%"></div>
+            </div>
+          </div>
+        `).join('');
+
+      } catch (err) {
+        alert("Gagal menganalisis emosi: " + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> <span>Analisis Emosi Sekarang</span>`;
+      }
+    }
+
+    // 1:N Database & Identifikasi
+    async function registerFace() {
+      const name = document.getElementById('regName').value.trim();
+      const img = document.getElementById('regData').value;
+      if (!name) { alert("Masukkan nama terlebih dahulu!"); return; }
+      if (!img) { alert("Pilih foto wajah!"); return; }
+
+      try {
+        const resp = await fetch('/api/database/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: name, image: img })
+        });
+        const data = await resp.json();
+        if (data.error) { alert("Error: " + data.error); return; }
+        alert(`Berhasil mendaftarkan ${name}!`);
+        document.getElementById('regName').value = '';
+        loadGallery();
+      } catch (e) {
+        alert("Error: " + e.message);
+      }
+    }
+
+    async function loadGallery() {
+      try {
+        const resp = await fetch('/api/database/list');
+        const data = await resp.json();
+        const list = document.getElementById('galleryList');
+        document.getElementById('dbCount').innerText = data.length;
+        if (data.length === 0) {
+          list.innerHTML = `<p class="text-slate-500 col-span-full py-4 text-center">Belum ada wajah yang didaftarkan.</p>`;
+          return;
+        }
+        list.innerHTML = data.map(item => `
+          <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800 flex flex-col items-center text-center">
+            <img src="${item.thumbnail}" class="w-16 h-16 rounded-lg object-cover mb-2 border border-slate-700">
+            <div class="font-bold text-slate-200 truncate w-full">${item.name}</div>
+            <div class="text-[10px] text-slate-500">ID: #${item.id}</div>
+          </div>
+        `).join('');
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    async function identifyFace() {
+      const img = document.getElementById('searchData').value;
+      if (!img) { alert("Unggah foto uji terlebih dahulu!"); return; }
+
+      const box = document.getElementById('identifyResult');
+      box.classList.remove('hidden');
+      box.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Memindai database dengan potongan wajah...`;
+
+      try {
+        const resp = await fetch('/api/database/identify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: img })
+        });
+        const data = await resp.json();
+        if (data.error) {
+          box.innerHTML = `<span class="text-rose-400">Error: ${data.error}</span>`;
+          return;
+        }
+        if (data.matches.length === 0) {
+          box.innerHTML = `<span class="text-slate-400">Database kosong. Daftarkan minimal satu wajah terlebih dahulu.</span>`;
+          return;
+        }
+        const top = data.matches[0];
+        box.innerHTML = `
+          <div class="space-y-1">
+            <div class="text-slate-400 font-semibold">Hasil Pencocokan Terdekat:</div>
+            <div class="text-sm font-bold ${top.is_match ? 'text-emerald-400' : 'text-rose-400'}">
+              ${top.name} (Cosine: ${top.similarity.toFixed(4)} &bull; ${top.confidence_percent.toFixed(1)}%)
+            </div>
+            <div class="text-[11px] text-slate-400">
+              ${top.is_match ? '✅ Cocok dengan database!' : '❌ Kemiripan rendah (bukan orang yang terdaftar di database).'}
+            </div>
+          </div>
+        `;
+      } catch (e) {
+        box.innerHTML = `<span class="text-rose-400">Gagal: ${e.message}</span>`;
+      }
+    }
+
+    async function clearDatabase() {
+      if (!confirm("Kosongkan semua data wajah di database?")) return;
+      await fetch('/api/database/clear', { method: 'POST' });
+      loadGallery();
+    }
+
+    // Tab 4: Inspeksi Vektor
+    async function inspectEmbedding() {
+      const img = document.getElementById('inspectData').value;
+      if (!img) { alert("Unggah foto terlebih dahulu!"); return; }
+
+      const valuesBox = document.getElementById('vectorValues');
+      valuesBox.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Menghitung 512 dimensi vektor ArcFace...`;
+
+      try {
+        const resp = await fetch('/api/inspect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: img })
+        });
+        const data = await resp.json();
+        if (data.error) { valuesBox.innerText = data.error; return; }
+
+        document.getElementById('statNorm').innerText = data.norm.toFixed(2);
+        document.getElementById('statMean').innerText = data.mean.toFixed(4);
+        document.getElementById('statStd').innerText = data.std.toFixed(4);
+        document.getElementById('statMinMax').innerText = `${data.min.toFixed(2)} / ${data.max.toFixed(2)}`;
+
+        const sample = data.vector_sample.map((val, idx) => `[Dim ${idx.toString().padStart(2, '0')}]: ${val >= 0 ? '+' : ''}${val.toFixed(6)}`).join('\n');
+        valuesBox.innerText = sample + `\n\n... dan 480 dimensi lainnya (Total: 512 FP32 nilai).`;
+      } catch (e) {
+        valuesBox.innerText = "Error: " + e.message;
+      }
+    }
+
+    // Inisialisasi awal
+    window.addEventListener('DOMContentLoaded', () => {
+      loadGallery();
+    });
+  </script>
+</body>
+</html>
